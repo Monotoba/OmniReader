@@ -37,6 +37,22 @@ mypy src/omnireader
 `scripts/git-local` behaves like `git` from the project root. It also supports
 managed workspaces that keep repository metadata in `.git-local`.
 
+## Automation
+
+GitHub Actions runs linting, type checks, tests on Python 3.10/3.12/3.13, and
+distribution validation for every push and pull request. Dependabot checks
+Python and Actions dependencies monthly.
+
+Pushing a tag matching the package version creates a GitHub Release containing
+the verified wheel and source distribution:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow rejects a tag that does not match `[project].version`.
+
 The complete product specification is in
 [`docs/omnireader-spec.md`](docs/omnireader-spec.md).
 

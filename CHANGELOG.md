@@ -8,4 +8,5 @@
 - Added synchronized word/sentence highlighting, navigation, and click-to-seek.
 - Added per-document voices, filters, bookmarks, and reading-position persistence.
 - Added settings, optional forced alignment, quality checks, and CI.
-
+- Added multi-version CI, distribution validation, Dependabot, and tag-driven
+  GitHub Release automation.
