@@ -1,0 +1,6 @@
+#!/bin/sh
+root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+if [ -d "$root/.git-local" ]; then
+    exec git --git-dir="$root/.git-local" --work-tree="$root" "$@"
+fi
+exec git -C "$root" "$@"

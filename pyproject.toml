@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnireader"
+version = "0.1.0"
+description = "A Linux desktop document reader with cloud and offline text-to-speech"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "OmniReader contributors"}]
+dependencies = [
+  "PySide6>=6.6",
+  "beautifulsoup4>=4.12",
+  "ebooklib>=0.18",
+  "edge-tts>=6.1",
+  "lxml>=5",
+  "markdown-it-py>=3",
+  "PyMuPDF>=1.23",
+  "python-docx>=1.1",
+  "striprtf>=0.0.26",
+  "syntok>=1.4",
+]
+
+[project.optional-dependencies]
+mime = ["python-magic>=0.4"]
+piper = ["piper-tts>=1.2"]
+alignment = ["aeneas>=1.7"]
+dev = ["pytest>=8", "pytest-qt>=4.4", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+omnireader = "omnireader.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+disable_error_code = ["misc"]
+follow_imports = "skip"
+no_site_packages = true
+
+[[tool.mypy.overrides]]
+module = [
+  "PySide6.*",
+  "omnireader.main",
+  "omnireader.ui.*",
+  "omnireader.playback.audio_player",
+  "omnireader.playback.engine",
+  "omnireader.tts.backend_manager",
+]
+ignore_errors = true
+follow_imports = "skip"
