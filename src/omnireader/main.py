@@ -5,17 +5,23 @@ import logging
 import sys
 from pathlib import Path
 
+# Support `python src/omnireader/main.py` in addition to the installed command
+# and `python -m omnireader`. Direct execution puts the package directory, not
+# its `src` parent, on sys.path.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 
-from .config import cache_dir, database_path
-from .document.parsers import default_registry
-from .persistence.bookmarks_repo import BookmarksRepository
-from .persistence.db import Database
-from .persistence.documents_repo import DocumentsRepository
-from .persistence.settings_repo import SettingsRepository
-from .tts.cache import AudioCache
-from .ui.main_window import MainWindow
+from omnireader.config import cache_dir, database_path
+from omnireader.document.parsers import default_registry
+from omnireader.persistence.bookmarks_repo import BookmarksRepository
+from omnireader.persistence.db import Database
+from omnireader.persistence.documents_repo import DocumentsRepository
+from omnireader.persistence.settings_repo import SettingsRepository
+from omnireader.tts.cache import AudioCache
+from omnireader.ui.main_window import MainWindow
 
 
 def build_parser() -> argparse.ArgumentParser:

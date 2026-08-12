@@ -10,3 +10,5 @@
 - Added settings, optional forced alignment, quality checks, and CI.
 - Added multi-version CI, distribution validation, Dependabot, and tag-driven
   GitHub Release automation.
+- Fixed direct `src/omnireader/main.py` execution and clarified that editable
+  installs must be run from the repository root.

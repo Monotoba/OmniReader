@@ -8,12 +8,24 @@ and remembers tabs, bookmarks, filters, voices, and reading positions.
 ## Install and run
 
 Python 3.10 or newer is required. A virtual environment is recommended.
+Run these commands from the repository root—the directory containing
+`pyproject.toml`—not from `src/omnireader`:
 
 ```bash
+cd /path/to/OmniReader
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e '.[dev]'
 omnireader
+```
+
+Once installed, `python -m omnireader` is equivalent to `omnireader`. For a
+source-tree launch without installation, use either of these from the
+repository root:
+
+```bash
+PYTHONPATH=src python -m omnireader
+python src/omnireader/main.py
 ```
 
 Piper is optional. Put matching `*.onnx` and `*.onnx.json` voice files in
