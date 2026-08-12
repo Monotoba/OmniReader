@@ -28,6 +28,24 @@ PYTHONPATH=src python -m omnireader
 python src/omnireader/main.py
 ```
 
+The convenience scripts always locate the repository root and activate its
+`.venv` before running. They fail with setup instructions if the environment or
+development tools are missing:
+
+```bash
+./scripts/run.sh [document ...]
+./scripts/test.sh
+```
+
+Set `OMNIREADER_VENV=/path/to/venv` to use a different virtual environment.
+Activation applies to the script process and the application/test process it
+starts; a child script cannot alter the calling shell's environment.
+
+Qt may print a PipeWire/PulseAudio connection warning when the desktop audio
+service is unavailable. That warning is separate from application startup. If
+speech produces no sound, start the system audio service or select a working
+Qt audio output; it does not require changing OmniReader's Python environment.
+
 Piper is optional. Put matching `*.onnx` and `*.onnx.json` voice files in
 `~/.local/share/omnireader/piper-voices/`, then install `piper-tts` or place a
 `piper` executable on `PATH`. Edge TTS requires a network connection. Legacy

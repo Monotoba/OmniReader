@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Added `scripts/run.sh` and `scripts/test.sh`, which locate and activate the
+  project virtual environment before running.
+- Excluded accidentally nested virtual environments from byte-compilation
+  checks.
+- Fixed PySide6 `QMediaPlayer.positionChanged` connection failures caused by a
+  `qlonglong`/Python `int` signal mismatch.
+
 ## 0.1.0 — 2026-08-12
 
 - Added the PySide6 multi-document reader interface and session restoration.

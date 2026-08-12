@@ -39,21 +39,16 @@ jobs:
 
       - name: Install project and development tools
         run: |
+          python -m venv .venv
+          . .venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install -e '.[dev]'
           python -m pip check
 
-      - name: Lint
-        run: ruff check src tests
-
-      - name: Type check
-        run: mypy src/omnireader
-
-      - name: Test
-        run: pytest -q
-
-      - name: Verify byte compilation
-        run: python -m compileall -q src
+      - name: Verify launcher and run quality suite
+        run: |
+          ./scripts/run.sh --help
+          ./scripts/test.sh -q
 
   package:
     runs-on: ubuntu-latest
@@ -81,4 +76,3 @@ jobs:
           name: python-distributions
           path: dist/
           if-no-files-found: error
-

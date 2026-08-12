@@ -7,7 +7,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 
 
 class AudioPlayer(QObject):
-    position_changed = Signal(int)
+    position_changed = Signal(object)
     finished = Signal()
     error = Signal(str)
 
@@ -16,7 +16,10 @@ class AudioPlayer(QObject):
         self.output = QAudioOutput(self)
         self.player = QMediaPlayer(self)
         self.player.setAudioOutput(self.output)
-        self.player.positionChanged.connect(self.position_changed)
+        # Qt exposes this value as qlonglong. Connecting that signal directly
+        # to Signal(int) is rejected by some PySide6 releases even though the
+        # Python value is an int, so adapt it through a normal callable.
+        self.player.positionChanged.connect(self._position_changed)
         self.player.mediaStatusChanged.connect(self._status_changed)
         self.player.errorOccurred.connect(
             lambda _code, message: self.error.emit(message)
@@ -34,6 +37,9 @@ class AudioPlayer(QObject):
 
     def stop(self) -> None:
         self.player.stop()
+
+    def _position_changed(self, position: int) -> None:
+        self.position_changed.emit(int(position))
 
     def _status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

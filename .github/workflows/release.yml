@@ -40,17 +40,18 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
+          python -m venv .venv
+          . .venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install -e '.[dev]'
           python -m pip check
-          ruff check src tests
-          mypy src/omnireader
-          pytest -q
+          ./scripts/run.sh --help
+          ./scripts/test.sh -q
 
       - name: Build and inspect distributions
         run: |
-          python -m build
-          python -m twine check dist/*
+          .venv/bin/python -m build
+          .venv/bin/python -m twine check dist/*
 
       - name: Create GitHub release
         env:
