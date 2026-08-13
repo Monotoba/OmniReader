@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal, Slot
 
 from ..document.filters import FilterSettings, read_queue
 from ..document.model import NormalizedDocument, TextPosition
@@ -24,6 +25,7 @@ class PlaybackPreferences:
 class _WorkerSignals(QObject):
     ready = Signal(int, object)
     failed = Signal(int, str)
+    done = Signal(object)
 
 
 class _SynthesisWorker(QRunnable):
@@ -33,27 +35,37 @@ class _SynthesisWorker(QRunnable):
         manager: BackendManager,
         chunk: TextChunk,
         preferences: PlaybackPreferences,
+        cancelled: threading.Event,
     ) -> None:
         super().__init__()
+        self.setAutoDelete(False)
         self.index = index
         self.manager = manager
         self.chunk = chunk
         self.preferences = preferences
+        self.cancelled = cancelled
         self.signals = _WorkerSignals()
 
     @Slot()
     def run(self) -> None:
         try:
+            if self.cancelled.is_set():
+                return
             result = self.manager.synthesize(
                 self.chunk,
                 self.preferences.backend,
                 self.preferences.voices or {},
                 self.preferences.rate,
                 self.preferences.pitch,
+                cancellation=self.cancelled,
             )
-            self.signals.ready.emit(self.index, result)
+            if not self.cancelled.is_set():
+                self.signals.ready.emit(self.index, result)
         except Exception as exc:
-            self.signals.failed.emit(self.index, str(exc))
+            if not self.cancelled.is_set():
+                self.signals.failed.emit(self.index, str(exc))
+        finally:
+            self.signals.done.emit(self)
 
 
 class PlaybackEngine(QObject):
@@ -84,12 +96,20 @@ class PlaybackEngine(QObject):
         self.index = 0
         self._generation = 0
         self._buffer: dict[int, SynthesisResult] = {}
-        self._pending: set[int] = set()
+        self._pending: set[tuple[int, int]] = set()
+        self._workers: set[_SynthesisWorker] = set()
+        self._retired_workers: set[_SynthesisWorker] = set()
+        self._worker_cleanup_scheduled = False
+        self._generation_cancelled = threading.Event()
         self._clock = PlaybackClock()
         self._is_playing = False
         self._loaded_index: int | None = None
         self._pending_filters: FilterSettings | None = None
-        self._pool = QThreadPool.globalInstance()
+        # TTSBackend instances contain mutable cancellation/process state and
+        # must never synthesize concurrently. Look-ahead remains effective:
+        # this lane prepares queued chunks sequentially while audio plays.
+        self._pool = QThreadPool(self)
+        self._pool.setMaxThreadCount(1)
 
     @property
     def position(self) -> TextPosition | None:
@@ -118,12 +138,14 @@ class PlaybackEngine(QObject):
         self._invalidate()
 
     def set_preferences(self, preferences: PlaybackPreferences) -> None:
+        if preferences == self.preferences:
+            return
         was_playing = self._is_playing
         if was_playing:
             self.audio.stop()
             self._loaded_index = None
         self.preferences = preferences
-        self._invalidate()
+        self._invalidate(cancel_active=True)
         if was_playing:
             self.play()
 
@@ -152,7 +174,7 @@ class PlaybackEngine(QObject):
         self._loaded_index = None
         self._is_playing = False
         self.playing_changed.emit(False)
-        self.manager.cancel()
+        self._invalidate(cancel_active=True)
 
     def seek(self, position: TextPosition) -> None:
         candidates = [
@@ -170,7 +192,7 @@ class PlaybackEngine(QObject):
             self.audio.stop()
             self._loaded_index = None
             self.index = (exact or candidates)[0]
-            self._invalidate()
+            self._invalidate(cancel_active=True)
             self.position_changed.emit(self.position)
             if was_playing:
                 self.play()
@@ -221,14 +243,26 @@ class PlaybackEngine(QObject):
 
     def _fill_buffer(self) -> None:
         generation = self._generation
+        cancellation = self._generation_cancelled
         end = min(
             len(self.queue), self.index + max(1, self.preferences.buffer_depth + 1)
         )
         for index in range(self.index, end):
-            if index in self._buffer or index in self._pending:
+            pending_key = (generation, index)
+            if index in self._buffer or pending_key in self._pending:
                 continue
             worker = _SynthesisWorker(
-                index, self.manager, self._chunk(index), self.preferences
+                index,
+                self.manager,
+                self._chunk(index),
+                PlaybackPreferences(
+                    self.preferences.backend,
+                    dict(self.preferences.voices or {}),
+                    self.preferences.rate,
+                    self.preferences.pitch,
+                    self.preferences.buffer_depth,
+                ),
+                cancellation,
             )
             worker.signals.ready.connect(
                 lambda item_index, result, token=generation: self._ready(
@@ -240,11 +274,13 @@ class PlaybackEngine(QObject):
                     token, item_index, message
                 )
             )
-            self._pending.add(index)
+            worker.signals.done.connect(self._worker_done)
+            self._pending.add(pending_key)
+            self._workers.add(worker)
             self._pool.start(worker)
 
     def _ready(self, generation: int, index: int, result: SynthesisResult) -> None:
-        self._pending.discard(index)
+        self._pending.discard((generation, index))
         if generation != self._generation:
             return
         self._buffer[index] = result
@@ -252,11 +288,28 @@ class PlaybackEngine(QObject):
             self._play_current()
 
     def _failed(self, generation: int, index: int, message: str) -> None:
-        self._pending.discard(index)
+        self._pending.discard((generation, index))
         if generation == self._generation:
             self._is_playing = False
             self.playing_changed.emit(False)
             self.error.emit(message)
+
+    def _worker_done(self, worker: _SynthesisWorker) -> None:
+        # The queued done signal can reach the GUI thread just before run()
+        # returns on the worker thread. Keep ownership until Qt confirms the
+        # private pool has no active run frames.
+        self._retired_workers.add(worker)
+        if not self._worker_cleanup_scheduled:
+            self._worker_cleanup_scheduled = True
+            QTimer.singleShot(0, self._cleanup_workers)
+
+    def _cleanup_workers(self) -> None:
+        if self._pool.activeThreadCount():
+            QTimer.singleShot(10, self._cleanup_workers)
+            return
+        self._workers.difference_update(self._retired_workers)
+        self._retired_workers.clear()
+        self._worker_cleanup_scheduled = False
 
     def _play_current(self) -> None:
         result = self._buffer.get(self.index)
@@ -315,9 +368,13 @@ class PlaybackEngine(QObject):
         self.index += 1
         self._play_current()
 
-    def _invalidate(self) -> None:
+    def _invalidate(self, *, cancel_active: bool = False) -> None:
+        self._generation_cancelled.set()
+        if cancel_active:
+            self.manager.cancel()
         self._generation += 1
+        self._generation_cancelled = threading.Event()
         self._buffer.clear()
-        self._pending.clear()
+        self._pending = {key for key in self._pending if key[0] == self._generation}
         if self._is_playing:
             self._fill_buffer()

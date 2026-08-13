@@ -15,6 +15,10 @@ class BackendUnavailableError(TTSError):
     pass
 
 
+class SynthesisCancelledError(TTSError):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class VoiceInfo:
     id: str

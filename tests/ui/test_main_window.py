@@ -8,6 +8,7 @@ from omnireader.persistence.bookmarks_repo import BookmarksRepository
 from omnireader.persistence.db import Database
 from omnireader.persistence.documents_repo import DocumentsRepository
 from omnireader.persistence.settings_repo import SettingsRepository
+from omnireader.tts.base import VoiceInfo
 from omnireader.tts.cache import AudioCache
 from omnireader.ui.main_window import MainWindow
 
@@ -51,6 +52,21 @@ def test_main_window_opens_document_and_persists_tab(
     window.open_paths([source])
 
     assert window.tabs.count() == 1
-    assert window.current_reader().document.title == "book"
+    tab = window.current_reader()
+    assert tab.document.title == "book"
+
+    piper_voice = "/voices/en_US-test.onnx"
+    monkeypatch.setattr(
+        tab.manager,
+        "voices",
+        lambda backend: [VoiceInfo(piper_voice, "Piper test")]
+        if backend == "piper"
+        else [],
+    )
+    tab._preferences_changed("piper", "en-US-AriaNeural", 1.0, 0.0)
+    assert tab.engine.preferences.voices["piper"] == piper_voice
+    tab._preferences_changed("edge", piper_voice, 1.0, 0.0)
+    assert tab.engine.preferences.voices["edge"] == "en-US-AriaNeural"
+
     window.close()
     assert len(documents.open_tabs()) == 1

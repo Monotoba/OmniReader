@@ -1,5 +1,6 @@
 from .base import (
     BackendUnavailableError,
+    SynthesisCancelledError,
     SynthesisResult,
     TextChunk,
     TTSBackend,
@@ -9,6 +10,7 @@ from .base import (
 
 __all__ = [
     "BackendUnavailableError",
+    "SynthesisCancelledError",
     "SynthesisResult",
     "TTSBackend",
     "TextChunk",

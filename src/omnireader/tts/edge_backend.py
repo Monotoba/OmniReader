@@ -10,6 +10,7 @@ from typing import Any, TypeVar
 
 from .base import (
     BackendUnavailableError,
+    SynthesisCancelledError,
     SynthesisResult,
     TextChunk,
     TTSBackend,
@@ -68,7 +69,7 @@ class EdgeTTSBackend(TTSBackend):
         with path.open("wb") as audio:
             async for event in communicate.stream():
                 if self._cancelled.is_set():
-                    raise BackendUnavailableError("Edge synthesis was cancelled")
+                    raise SynthesisCancelledError("Edge synthesis was cancelled")
                 if event["type"] == "audio":
                     audio.write(event["data"])
                 elif event["type"] == "WordBoundary":
@@ -94,7 +95,7 @@ class EdgeTTSBackend(TTSBackend):
                 self._synthesize(text_chunk, voice_id, rate, pitch, path)
             )
             return SynthesisResult(path, timings, False)
-        except BackendUnavailableError:
+        except (BackendUnavailableError, SynthesisCancelledError):
             path.unlink(missing_ok=True)
             raise
         except Exception as exc:

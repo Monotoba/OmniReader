@@ -9,6 +9,7 @@ from pathlib import Path
 from .alignment import audio_duration_ms, estimated_word_timings, forced_word_timings
 from .base import (
     BackendUnavailableError,
+    SynthesisCancelledError,
     SynthesisResult,
     TextChunk,
     TTSBackend,
@@ -25,6 +26,7 @@ class PiperTTSBackend(TTSBackend):
         self.forced_alignment = forced_alignment
         self._process: subprocess.Popen[bytes] | None = None
         self._lock = threading.Lock()
+        self._cancelled = threading.Event()
 
     def _models(self) -> list[Path]:
         if not self.models_dir.is_dir():
@@ -45,6 +47,7 @@ class PiperTTSBackend(TTSBackend):
         self, text_chunk: TextChunk, voice_id: str, rate: float, pitch: float
     ) -> SynthesisResult:
         del pitch  # Piper CLI models do not expose a portable pitch control.
+        self._cancelled.clear()
         executable = shutil.which("piper")
         model = Path(voice_id).expanduser()
         if not executable or not model.is_file():
@@ -72,6 +75,9 @@ class PiperTTSBackend(TTSBackend):
             with self._lock:
                 if self._process is process:
                     self._process = None
+            if self._cancelled.is_set():
+                path.unlink(missing_ok=True)
+                raise SynthesisCancelledError("Piper synthesis was cancelled")
             if return_code or not path.exists():
                 raise BackendUnavailableError(
                     stderr.decode(errors="replace").strip() or "Piper failed"
@@ -94,6 +100,7 @@ class PiperTTSBackend(TTSBackend):
             raise BackendUnavailableError(f"Piper synthesis failed: {exc}") from exc
 
     def cancel(self) -> None:
+        self._cancelled.set()
         with self._lock:
             if self._process and self._process.poll() is None:
                 self._process.terminate()

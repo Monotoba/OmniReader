@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import threading
+
 from PySide6.QtCore import QObject, Signal
 
 from .base import (
     BackendUnavailableError,
+    SynthesisCancelledError,
     SynthesisResult,
     TextChunk,
     TTSBackend,
@@ -23,6 +26,7 @@ class BackendManager(QObject):
         self.order = [backend.name for backend in backends]
         self.cache = cache
         self.active_name: str | None = None
+        self._synthesis_lock = threading.Lock()
 
     def select(self, preferred: str) -> TTSBackend:
         order = [preferred, *(name for name in self.order if name != preferred)]
@@ -55,10 +59,31 @@ class BackendManager(QObject):
         voice_by_backend: dict[str, str],
         rate: float,
         pitch: float,
+        cancellation: threading.Event | None = None,
     ) -> SynthesisResult:
+        # Backend implementations own mutable cancellation and subprocess
+        # state. A manager deliberately exposes a single synthesis lane.
+        with self._synthesis_lock:
+            return self._synthesize(
+                chunk, preferred, voice_by_backend, rate, pitch, cancellation
+            )
+
+    def _synthesize(
+        self,
+        chunk: TextChunk,
+        preferred: str,
+        voice_by_backend: dict[str, str],
+        rate: float,
+        pitch: float,
+        cancellation: threading.Event | None,
+    ) -> SynthesisResult:
+        if cancellation and cancellation.is_set():
+            raise SynthesisCancelledError("Synthesis was cancelled")
         attempted: set[str] = set()
         backend = self.select(preferred)
         while backend.name not in attempted:
+            if cancellation and cancellation.is_set():
+                raise SynthesisCancelledError("Synthesis was cancelled")
             attempted.add(backend.name)
             voice = voice_by_backend.get(backend.name, "")
             if not voice:
@@ -71,12 +96,18 @@ class BackendManager(QObject):
             key = self.cache.key(backend.name, chunk, voice, rate, pitch)
             cached = self.cache.get(key)
             if cached:
+                if cancellation and cancellation.is_set():
+                    raise SynthesisCancelledError("Synthesis was cancelled")
                 return cached
             try:
-                return self.cache.put(
-                    key, backend.synthesize(chunk, voice, rate, pitch)
-                )
-            except BackendUnavailableError:
+                result = backend.synthesize(chunk, voice, rate, pitch)
+                if cancellation and cancellation.is_set():
+                    result.audio_path.unlink(missing_ok=True)
+                    raise SynthesisCancelledError("Synthesis was cancelled")
+                return self.cache.put(key, result)
+            except BackendUnavailableError as exc:
+                if cancellation and cancellation.is_set():
+                    raise SynthesisCancelledError("Synthesis was cancelled") from exc
                 self.backend_unavailable.emit(backend.name)
                 candidates = [
                     candidate

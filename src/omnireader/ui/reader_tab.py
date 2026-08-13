@@ -196,6 +196,25 @@ class ReaderTab(QWidget):
         self, backend: str, voice: str, rate: float, pitch: float
     ) -> None:
         voices = dict(self.engine.preferences.voices or {})
+        backend_changed = backend != self.engine.preferences.backend
+        if backend_changed:
+            voice = voices.get(backend) or str(
+                self.settings.get(f"tts.voice.{backend}", "")
+            )
+            available = []
+            if backend == "piper":
+                try:
+                    available = [
+                        (item.id, item.name) for item in self.manager.voices(backend)
+                    ]
+                except Exception as exc:
+                    self.status_message.emit(str(exc))
+                available_ids = {voice_id for voice_id, _name in available}
+                if voice not in available_ids:
+                    voice = available[0][0] if available else ""
+            self.controls.set_preferences(backend, voice, rate, pitch)
+            if available:
+                self.controls.set_voices(available, voice)
         voices[backend] = voice
         preferences = PlaybackPreferences(
             backend, voices, rate, pitch, int(self.settings.get("tts.buffer_depth"))
@@ -204,7 +223,7 @@ class ReaderTab(QWidget):
         self.documents.save_voice_preferences(
             self.document.doc_id, VoicePreferences(backend, voice, rate, pitch)
         )
-        if backend == "piper":
+        if backend == "piper" and not backend_changed:
             try:
                 values = [(item.id, item.name) for item in self.manager.voices(backend)]
                 self.controls.set_voices(values, voice)

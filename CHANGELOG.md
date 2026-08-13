@@ -10,6 +10,9 @@
   `qlonglong`/Python `int` signal mismatch.
 - Replaced in-process Qt Multimedia playback with isolated `ffplay`/`mpv`
   playback on Linux, preventing native crashes when PipeWire is unavailable.
+- Serialized look-ahead synthesis, made backend-switch cancellation generation
+  aware, and preserved each backend's own voice when switching between Edge
+  and Piper to prevent playback-transition crashes.
 
 ## 0.1.0 — 2026-08-12
 
