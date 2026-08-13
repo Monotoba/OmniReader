@@ -8,6 +8,8 @@
   checks.
 - Fixed PySide6 `QMediaPlayer.positionChanged` connection failures caused by a
   `qlonglong`/Python `int` signal mismatch.
+- Replaced in-process Qt Multimedia playback with isolated `ffplay`/`mpv`
+  playback on Linux, preventing native crashes when PipeWire is unavailable.
 
 ## 0.1.0 — 2026-08-12
 

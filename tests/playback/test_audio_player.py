@@ -1,48 +1,46 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Signal
+import shutil
+from pathlib import Path
 
-import omnireader.playback.audio_player as audio_player_module
+from PySide6.QtCore import QProcess
 
-
-class FakeAudioOutput(QObject):
-    pass
-
-
-class FakeMediaPlayer(QObject):
-    """Expose the same 64-bit position signal that triggered the PySide error."""
-
-    positionChanged = Signal("qlonglong")
-    mediaStatusChanged = Signal(object)
-    errorOccurred = Signal(object, str)
-
-    class MediaStatus:
-        EndOfMedia = object()
-
-    def setAudioOutput(self, _output: QObject) -> None:
-        pass
-
-    def setSource(self, _source: object) -> None:
-        pass
-
-    def play(self) -> None:
-        pass
-
-    def pause(self) -> None:
-        pass
-
-    def stop(self) -> None:
-        pass
+from omnireader.playback.audio_player import AudioPlayer
 
 
-def test_audio_player_adapts_qt_64_bit_position_signal(monkeypatch) -> None:
-    monkeypatch.setattr(audio_player_module, "QAudioOutput", FakeAudioOutput)
-    monkeypatch.setattr(audio_player_module, "QMediaPlayer", FakeMediaPlayer)
+def test_audio_player_prefers_ffplay(monkeypatch) -> None:
+    monkeypatch.setattr(
+        shutil, "which", lambda name: "/usr/bin/ffplay" if name == "ffplay" else None
+    )
 
-    player = audio_player_module.AudioPlayer()
+    player = AudioPlayer()
+
+    assert player._program == Path("/usr/bin/ffplay")
+    assert player._process.processEnvironment().value("SDL_AUDIODRIVER") == "pulseaudio"
+
+
+def test_audio_player_reports_missing_external_player(monkeypatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    player = AudioPlayer()
+    errors: list[str] = []
+    player.error.connect(errors.append)
+
+    player.play(Path("missing.mp3"))
+
+    assert errors and "ffplay" in errors[0] and "mpv" in errors[0]
+
+
+def test_audio_player_tracks_position_without_qt_multimedia(monkeypatch) -> None:
+    monkeypatch.setattr(
+        shutil, "which", lambda name: "/usr/bin/ffplay" if name == "ffplay" else None
+    )
+    player = AudioPlayer()
     positions: list[int] = []
     player.position_changed.connect(positions.append)
+    player._elapsed_ms = 123
+    player._started_at = None
 
-    player.player.positionChanged.emit(2**32)
+    player._emit_position()
 
-    assert positions == [2**32]
+    assert positions == [123]
+    assert player._process.state() == QProcess.ProcessState.NotRunning

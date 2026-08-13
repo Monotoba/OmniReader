@@ -8,6 +8,13 @@ and remembers tabs, bookmarks, filters, voices, and reading positions.
 ## Install and run
 
 Python 3.10 or newer is required. A virtual environment is recommended.
+Linux audio playback requires `ffplay` (normally provided by the `ffmpeg`
+package) or `mpv`. On Ubuntu/Debian:
+
+```bash
+sudo apt install ffmpeg
+```
+
 Run these commands from the repository root—the directory containing
 `pyproject.toml`—not from `src/omnireader`:
 
@@ -41,10 +48,10 @@ Set `OMNIREADER_VENV=/path/to/venv` to use a different virtual environment.
 Activation applies to the script process and the application/test process it
 starts; a child script cannot alter the calling shell's environment.
 
-Qt may print a PipeWire/PulseAudio connection warning when the desktop audio
-service is unavailable. That warning is separate from application startup. If
-speech produces no sound, start the system audio service or select a working
-Qt audio output; it does not require changing OmniReader's Python environment.
+On Linux, synthesized audio plays in an `ffplay`/`mpv` child process. This
+isolates OmniReader from native multimedia crashes and supports both PulseAudio
+and PipeWire's PulseAudio compatibility service. Audio service failures appear
+as playback errors instead of terminating the application.
 
 Piper is optional. Put matching `*.onnx` and `*.onnx.json` voice files in
 `~/.local/share/omnireader/piper-voices/`, then install `piper-tts` or place a

@@ -23,6 +23,10 @@ dependencies = [
   "syntok>=1.4",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Monotoba/OmniReader"
+Issues = "https://github.com/Monotoba/OmniReader/issues"
+
 [project.optional-dependencies]
 mime = ["python-magic>=0.4"]
 piper = ["piper-tts>=1.2"]
