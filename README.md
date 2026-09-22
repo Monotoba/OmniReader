@@ -123,4 +123,6 @@ The complete product specification is in
 
 ## License
 
-MIT
+The current source is BSD-2-Clause. See [LICENSE](LICENSE) for the attribution
+and redistribution conditions. The existing v0.1.0 release was published under
+MIT; its license remains in that release's archive.

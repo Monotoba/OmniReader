@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Changed the project license to BSD-2-Clause for new distributions; earlier
+  releases retain the license terms under which they were published.
 - Added `scripts/run.sh` and `scripts/test.sh`, which locate and activate the
   project virtual environment before running.
 - Excluded accidentally nested virtual environments from byte-compilation

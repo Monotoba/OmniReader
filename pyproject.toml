@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "omnireader"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Linux desktop document reader with cloud and offline text-to-speech"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "BSD-2-Clause"
 authors = [{name = "OmniReader contributors"}]
 dependencies = [
   "PySide6>=6.6",
