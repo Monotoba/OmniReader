@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 — 2026-09-22
 
 - Changed the project license to BSD-2-Clause for new distributions; earlier
   releases retain the license terms under which they were published.
