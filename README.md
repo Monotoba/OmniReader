@@ -18,6 +18,11 @@ This is an early `0.1.x` release. See the [changelog](CHANGELOG.md) for recent
 fixes and [report problems](https://github.com/Monotoba/OmniReader/issues/new/choose)
 with the document format, Linux distribution, and steps to reproduce.
 
+![OmniReader displaying a sample text document with playback controls, reading filters, and bookmarks](docs/omnireader-demo.png)
+
+*OmniReader running on Linux with a sample text document. The image shows the
+reading interface; audio playback is not demonstrated in this screenshot.*
+
 ## Install and run
 
 Python 3.10 or newer is required. Linux audio playback requires `ffplay`
