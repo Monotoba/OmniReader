@@ -1,33 +1,50 @@
 # OmniReader
 
-OmniReader is a Linux-first, read-only desktop document reader. It reads common
-document formats aloud with Edge TTS or local Piper voices, automatically falls
-back when a backend is unavailable, highlights the current sentence or word,
-and remembers tabs, bookmarks, filters, voices, and reading positions.
+OmniReader reads documents aloud on Linux. Open a file, choose an Edge TTS or
+local Piper voice, and follow along with sentence or word highlighting. It
+remembers your tabs, bookmarks, filters, voices, and reading positions. Opening
+a document does not modify the original file.
+
+**Formats:** plain text (`.txt`), Markdown (`.md`), HTML (`.html`, `.htm`),
+Word (`.docx`, legacy `.doc`), PDF (`.pdf`), EPUB (`.epub`), and RTF (`.rtf`).
+Legacy `.doc` files require LibreOffice. PDFs need extractable text; this app
+does not OCR image-only scans.
+
+**Voice choice:** Edge TTS needs a network connection. Piper can work offline
+after you install a voice model. OmniReader falls back to another available
+backend when one is unavailable.
+
+This is an early `0.1.x` release. See the [changelog](CHANGELOG.md) for recent
+fixes and [report problems](https://github.com/Monotoba/OmniReader/issues/new/choose)
+with the document format, Linux distribution, and steps to reproduce.
 
 ## Install and run
 
-Python 3.10 or newer is required. A virtual environment is recommended.
-Linux audio playback requires `ffplay` (normally provided by the `ffmpeg`
-package) or `mpv`. On Ubuntu/Debian:
+Python 3.10 or newer is required. Linux audio playback requires `ffplay`
+(normally provided by `ffmpeg`) or `mpv`. On Ubuntu/Debian, install the audio
+player and Python virtual environment support:
 
 ```bash
-sudo apt install ffmpeg
+sudo apt install ffmpeg python3-venv
 ```
 
-Run these commands from the repository root—the directory containing
-`pyproject.toml`—not from `src/omnireader`:
+Clone the source and install OmniReader in a virtual environment:
 
 ```bash
-cd /path/to/OmniReader
+git clone https://github.com/Monotoba/OmniReader.git
+cd OmniReader
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install -e '.[dev]'
+python -m pip install -e .
 omnireader
 ```
 
-Once installed, `python -m omnireader` is equivalent to `omnireader`. For a
-source-tree launch without installation, use either of these from the
+The install commands run from the repository root (the directory containing
+`pyproject.toml`). To open a document immediately, run
+`omnireader /path/to/document.pdf`. You can also open documents from the app.
+After installation, `python -m omnireader` is equivalent to `omnireader`.
+
+For a source-tree launch without installation, use either of these from the
 repository root:
 
 ```bash
@@ -65,11 +82,17 @@ cache directories. Override them for testing with `OMNIREADER_DATA_DIR` and
 
 ## Development
 
+Install the development dependencies with `python -m pip install -e '.[dev]'`
+in the active virtual environment, then run:
+
 ```bash
 python -m pytest
 ruff check src tests
 mypy src/omnireader
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for issue reports, changes, and pull
+requests.
 
 `scripts/git-local` behaves like `git` from the project root. It also supports
 managed workspaces that keep repository metadata in `.git-local`.
