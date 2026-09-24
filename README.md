@@ -1,5 +1,11 @@
 # OmniReader
 
+[![CI](https://github.com/Monotoba/OmniReader/actions/workflows/ci.yml/badge.svg)](https://github.com/Monotoba/OmniReader/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/Monotoba/OmniReader)](https://github.com/Monotoba/OmniReader/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/Monotoba/OmniReader/total)](https://github.com/Monotoba/OmniReader/releases)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD--2--Clause-blue.svg)](LICENSE)
+
 OmniReader reads documents aloud on Linux. Open a file, choose an Edge TTS or
 local Piper voice, and follow along with sentence or word highlighting. It
 remembers your tabs, bookmarks, filters, voices, and reading positions. Opening
